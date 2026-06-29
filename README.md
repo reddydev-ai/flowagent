@@ -1,0 +1,84 @@
+# FlowAgent — Vendor Verification Agent
+
+An agentic workflow that verifies a supplier end-to-end: it **researches** the
+vendor on the public web, **checks** which required compliance documents are
+missing, produces a **green/yellow/red risk decision**, **pauses for human
+approval**, and then writes a final **memo**.
+
+Built on **LangGraph** with real human-in-the-loop control.
+
+## Why it's built this way
+
+| Decision | Reason |
+|---|---|
+| **LangGraph (not a plain chain)** | The workflow needs explicit state, branching, and the ability to *pause and resume*. Chains can't pause for a human. |
+| **Typed state (`VendorState`)** | Every node declares what it reads/writes — debuggable and safe. |
+| **`interrupt()` human-in-the-loop** | The graph genuinely halts at the approval gate and only continues when a reviewer sends approve/reject. High-stakes actions shouldn't be fully autonomous. |
+| **Persistent checkpointing** | With `DATABASE_URL` set, a paused run is stored in Postgres and survives a process restart — resumed later by `thread_id`. Falls back to in-memory for zero-infra demos. |
+| **Deterministic rule + LLM judgment** | Document completeness is a hard rule; public-info red flags are weighed by the LLM. Neither alone is enough. |
+
+## Architecture
+
+```
+START
+  │
+  ▼ research            → Tavily web search (public info on the vendor)
+  ▼ check_documents     → compare submitted docs vs required list → missing[]
+  ▼ assess_risk         → deterministic doc rule + GPT-4o red-flag judgment → green/yellow/red
+  ▼ human_approval      → interrupt()  ⏸  (waits for reviewer: approve/reject)
+  ▼ write_memo          → GPT-4o final memo (summary, findings, decision, next steps)
+END
+        │
+        ▼ checkpointer: PostgresSaver (if DATABASE_URL) else MemorySaver
+```
+
+## Setup
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env       # add OPENAI_API_KEY (and TAVILY_API_KEY for real search)
+```
+
+### Run the API (two-step because it pauses for a human)
+```bash
+uvicorn app.main:app --reload
+```
+
+Start a verification:
+```bash
+curl -X POST http://localhost:8000/verify \
+  -H "Content-Type: application/json" \
+  -d '{"vendor_name":"Acme Supplies Inc.","submitted_docs":["Certificate of Insurance","GST/HST Registration"]}'
+# -> returns { "thread_id": "...", "status": "awaiting_approval", "approval_request": {...} }
+```
+
+Approve (or reject) it:
+```bash
+curl -X POST http://localhost:8000/verify/resume \
+  -H "Content-Type: application/json" \
+  -d '{"thread_id":"PASTE_THREAD_ID","decision":"approve","comment":"Insurance verified."}'
+# -> returns the final memo
+```
+
+### Run the UI
+```bash
+streamlit run streamlit_app.py
+```
+
+## Deployment
+Deploy on **Railway** or **Render** (Dockerfile included). For persistent
+human-in-the-loop across restarts, attach a Postgres add-on and set `DATABASE_URL`.
+
+## Known limitations
+- Document "checking" matches by name; it doesn't yet parse/validate the document contents.
+- Single approval gate; no multi-level approval routing.
+- Risk model is heuristic + LLM, not a trained scoring model.
+- Web search quality depends on Tavily results.
+
+## What I would improve next
+- Parse uploaded documents (dates, coverage amounts, expiry) instead of name-matching.
+- Add an OAuth-scoped tool layer / MCP server for the document and CRM systems.
+- Multi-step approval routing (analyst → manager) with audit log.
+- Retry/error-handler nodes for tool failures.
+- Wire **GuardEval** to score task completion and decision consistency in CI.
