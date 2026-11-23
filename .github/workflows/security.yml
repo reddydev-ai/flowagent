@@ -1,0 +1,50 @@
+name: Security and policy unit tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install minimal test dependencies
+        run: python -m pip install "pytest==8.3.4" "fastapi==0.115.6" "pydantic==2.13.4"
+      - name: Syntax check
+        run: python -m compileall -q app tests
+      - name: Run isolated security tests
+        run: python -m pytest -q tests/test_security.py
+
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OPENAI_API_KEY: ""
+      TAVILY_API_KEY: ""
+      DATABASE_URL: ""
+      FLOWAGENT_API_KEY: "test-api-secret"
+      FLOWAGENT_REVIEWER_KEY: "different-reviewer-secret"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install application and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt "pytest==8.3.4" "httpx==0.28.1"
+      - name: Exercise real API and LangGraph approval lifecycle (offline)
+        run: python -m pytest -q tests/test_api_integration.py

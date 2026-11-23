@@ -10,12 +10,13 @@ production: the run is persisted by thread_id and resumed later by a reviewer.
 from __future__ import annotations
 import uuid
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from langgraph.types import Command
 
 from .config import get_settings
 from .graph import build_graph
+from .security import require_api_key, require_reviewer_key
 
 settings = get_settings()
 app = FastAPI(title="FlowAgent", version="1.0.0",
@@ -41,7 +42,7 @@ def health() -> dict:
 
 
 @app.post("/verify")
-def verify(req: VerifyRequest) -> dict:
+def verify(req: VerifyRequest, _auth: None = Depends(require_api_key)) -> dict:
     thread_id = str(uuid.uuid4())
     config = {"configurable": {"thread_id": thread_id}}
     GRAPH.invoke(
@@ -60,10 +61,13 @@ def verify(req: VerifyRequest) -> dict:
 
 
 @app.post("/verify/resume")
-def resume(req: ResumeRequest) -> dict:
+def resume(req: ResumeRequest, _auth: None = Depends(require_api_key), _reviewer: None = Depends(require_reviewer_key)) -> dict:
     if req.decision not in {"approve", "reject"}:
         raise HTTPException(status_code=400, detail="decision must be 'approve' or 'reject'")
     config = {"configurable": {"thread_id": req.thread_id}}
+    snapshot = GRAPH.get_state(config)
+    if not snapshot.next or not snapshot.tasks or not snapshot.tasks[0].interrupts:
+        raise HTTPException(status_code=409, detail="No pending approval for this thread.")
     result = GRAPH.invoke(
         Command(resume={"decision": req.decision, "comment": req.comment}),
         config=config,

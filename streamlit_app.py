@@ -3,6 +3,8 @@ Start a verification, review the agent's risk assessment, then approve/reject.
 Run with:  streamlit run streamlit_app.py
 """
 import uuid
+import os
+import secrets
 import streamlit as st
 from langgraph.types import Command
 
@@ -12,6 +14,19 @@ from app.graph import build_graph
 settings = get_settings()
 
 st.set_page_config(page_title="FlowAgent", page_icon="🛡️", layout="centered")
+# Explicit local-only opt-in. The Streamlit app bypasses FastAPI authentication
+# because it invokes the graph directly; fail closed before building any graph.
+if os.getenv("FLOWAGENT_ENABLE_LOCAL_UI", "").lower() != "true":
+    st.error("Standalone reviewer UI is disabled by default. Use an authenticated API integration in production.")
+    st.stop()
+if not settings.reviewer_api_key:
+    st.error("Set FLOWAGENT_REVIEWER_KEY before enabling this local demo UI.")
+    st.stop()
+access_key = st.text_input("Local demo reviewer key", type="password")
+if not access_key or not secrets.compare_digest(access_key, settings.reviewer_api_key):
+    st.warning("Reviewer access is required to run this demo.")
+    st.stop()
+st.warning("LOCAL DEMO ONLY. Do not expose this Streamlit app to public networks; no identity-based access, rate limiting, or audit log.")
 st.title("🛡️ FlowAgent — Vendor Verification")
 st.caption("Agentic workflow: research → document check → risk decision → human approval → memo")
 

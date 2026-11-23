@@ -8,6 +8,8 @@ class Settings(BaseModel):
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     tavily_api_key: str = os.getenv("TAVILY_API_KEY", "")
     chat_model: str = os.getenv("CHAT_MODEL", "gpt-4o")
+    api_key: str = os.getenv("FLOWAGENT_API_KEY", "")
+    reviewer_api_key: str = os.getenv("FLOWAGENT_REVIEWER_KEY", "")
 
     # If DATABASE_URL is set -> persistent Postgres checkpointer (production-style).
     # Otherwise -> in-memory checkpointer so the demo runs with zero infra.
