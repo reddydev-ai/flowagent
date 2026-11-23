@@ -34,7 +34,7 @@ END
 
 ## Security and deployment status
 
-**Portfolio demo; not production approved.** API access requires `FLOWAGENT_API_KEY` via `X-API-Key` and approval resumes additionally require the independent `FLOWAGENT_REVIEWER_KEY` via `X-Reviewer-Key`. Configure distinct high-entropy secrets; use HTTPS and a real identity-aware authorization system before production. The standalone Streamlit UI runs locally and is **not an authenticated reviewer portal**; do not expose it publicly. A configured but unavailable Postgres checkpointer fails closed instead of silently switching to volatile memory. Web research and LLM calls still need robust error handling and security review.
+**Portfolio demo; not production approved.** API access requires `FLOWAGENT_API_KEY` via `X-API-Key` and approval resumes additionally require the independent `FLOWAGENT_REVIEWER_KEY` via `X-Reviewer-Key`. Configure distinct high-entropy secrets; use HTTPS and a real identity-aware authorization system before production. The standalone Streamlit UI now **fails closed by default**: set `FLOWAGENT_ENABLE_LOCAL_UI=true` and configure `FLOWAGENT_REVIEWER_KEY` to allow local demo access. This is only a shared-key demo gate, **not** identity-aware authentication, and must not be exposed publicly. A configured but unavailable Postgres checkpointer fails closed instead of silently switching to volatile memory. Web research and LLM calls still need robust error handling and security review.
 
 ## Setup
 
@@ -71,7 +71,7 @@ curl -X POST http://localhost:8000/verify/resume \
 
 ### Run the UI
 ```bash
-streamlit run streamlit_app.py
+FLOWAGENT_ENABLE_LOCAL_UI=true streamlit run streamlit_app.py --server.address=127.0.0.1\n# Enter the FLOWAGENT_REVIEWER_KEY in the password field. Local demo only.
 ```
 
 ## Deployment
