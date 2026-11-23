@@ -42,6 +42,7 @@ END
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env       # add OPENAI_API_KEY (and TAVILY_API_KEY for real search)
+set -a; source .env; set +a  # export credentials for this shell (trusted local file only)
 ```
 
 ### Run the API (two-step because it pauses for a human)
