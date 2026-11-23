@@ -1,5 +1,8 @@
 # FlowAgent — Vendor Verification Agent
 
+> **Product-management portfolio brief:** [Problem, users, success metrics, roadmap and limitations](docs/PRODUCT_CASE_STUDY.md). This is an independent prototype; no employer or customer outcome is claimed.
+
+
 An agentic workflow that verifies a supplier end-to-end: it **researches** the
 vendor on the public web, **checks** which required compliance documents are
 missing, produces a **green/yellow/red risk decision**, **pauses for human
