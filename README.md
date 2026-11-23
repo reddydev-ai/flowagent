@@ -32,6 +32,10 @@ END
         ▼ checkpointer: PostgresSaver (if DATABASE_URL) else MemorySaver
 ```
 
+## Security and deployment status
+
+**Portfolio demo; not production approved.** API access requires `FLOWAGENT_API_KEY` via `X-API-Key` and approval resumes additionally require the independent `FLOWAGENT_REVIEWER_KEY` via `X-Reviewer-Key`. Configure distinct high-entropy secrets; use HTTPS and a real identity-aware authorization system before production. The standalone Streamlit UI runs locally and is **not an authenticated reviewer portal**; do not expose it publicly. A configured but unavailable Postgres checkpointer fails closed instead of silently switching to volatile memory. Web research and LLM calls still need robust error handling and security review.
+
 ## Setup
 
 ```bash
@@ -49,6 +53,7 @@ Start a verification:
 ```bash
 curl -X POST http://localhost:8000/verify \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: $FLOWAGENT_API_KEY" \
   -d '{"vendor_name":"Acme Supplies Inc.","submitted_docs":["Certificate of Insurance","GST/HST Registration"]}'
 # -> returns { "thread_id": "...", "status": "awaiting_approval", "approval_request": {...} }
 ```
@@ -57,6 +62,8 @@ Approve (or reject) it:
 ```bash
 curl -X POST http://localhost:8000/verify/resume \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: $FLOWAGENT_API_KEY" \
+  -H "X-Reviewer-Key: $FLOWAGENT_REVIEWER_KEY" \
   -d '{"thread_id":"PASTE_THREAD_ID","decision":"approve","comment":"Insurance verified."}'
 # -> returns the final memo
 ```
