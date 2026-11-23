@@ -21,6 +21,7 @@ from langgraph.types import interrupt
 from .config import get_settings
 from .state import VendorState
 from .tools import web_search
+from .risk_policy import enforce_risk_floor
 
 settings = get_settings()
 
@@ -101,6 +102,7 @@ def assess_risk(state: VendorState) -> dict:
         if line.upper().startswith("RATIONALE:"):
             rationale = line.split(":", 1)[1].strip()
 
+    risk = enforce_risk_floor(base, risk)
     return {"risk_level": risk, "risk_rationale": rationale}
 
 
@@ -183,9 +185,10 @@ def _make_checkpointer():
         except Exception as e:
             import warnings
             warnings.warn(
-                f"PostgresSaver failed ({e}), falling back to MemorySaver. "
+                f"PostgresSaver failed ({e}); refusing to use volatile storage. "
                 "Check DATABASE_URL and psycopg installation."
             )
+            raise RuntimeError("Configured persistent checkpoint storage is unavailable") from e
     from langgraph.checkpoint.memory import MemorySaver
     return MemorySaver()
 
