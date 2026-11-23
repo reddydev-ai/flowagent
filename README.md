@@ -1,10 +1,17 @@
 # FlowAgent — Vendor Verification Agent
 
-> **Product-management portfolio brief:** [Problem, users, success metrics, roadmap and limitations](docs/PRODUCT_CASE_STUDY.md). This is an independent prototype; no employer or customer outcome is claimed.
+> **AI product management perspective:** Automate investigation and document checks, but keep consequential decisions with a human reviewer. [Portfolio overview](https://github.com/reddydev-ai/guardeval/blob/main/PORTFOLIO.md) · [Product case study](docs/PRODUCT_CASE_STUDY.md) · [Technical setup](#setup)
 
+**What this shows:** an independent agentic vendor-verification prototype with a deterministic document-risk floor, LangGraph pause/resume and distinct API/reviewer credentials. The key product decision is *automation with accountable human control*. **The prototype does not prove vendor risk accuracy in real deployments or measured onboarding savings.**
 
-An agentic workflow that verifies a supplier end-to-end: it **researches** the
-vendor on the public web, **checks** which required compliance documents are
+| Product question | Decision | Evidence |
+| --- | --- | --- |
+| Who authorizes a final outcome? | Pause the graph for an explicit human decision | [Workflow graph](app/graph.py) |
+| Can AI override document-based risk? | Retain a deterministic minimum risk rating | [Risk guardrail](app/risk_policy.py) |
+| Can anyone replay an approval? | Reject unauthorized reviewer keys and repeated resume | [Real API integration tests](tests/test_api_integration.py) |
+
+An agentic workflow that verifies a supplier end-to-end: it can **research** the
+vendor on the public web when the external research service is configured, **checks** which required compliance documents are
 missing, produces a **green/yellow/red risk decision**, **pauses for human
 approval**, and then writes a final **memo**.
 
@@ -78,8 +85,7 @@ FLOWAGENT_ENABLE_LOCAL_UI=true streamlit run streamlit_app.py --server.address=1
 ```
 
 ## Deployment
-Deploy on **Railway** or **Render** (Dockerfile included). For persistent
-human-in-the-loop across restarts, attach a Postgres add-on and set `DATABASE_URL`.
+**No public backend is deployed or recommended for this portfolio prototype.** The Dockerfile supports private testing. Production would require user identity, reviewer roles, an audit log, concurrency-safe approvals, secure credentials and operational controls. A persistent Postgres checkpointer alone is not sufficient.
 
 ## Known limitations
 - Document "checking" matches by name; it doesn't yet parse/validate the document contents.
